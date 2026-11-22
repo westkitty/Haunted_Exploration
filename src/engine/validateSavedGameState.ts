@@ -1,4 +1,4 @@
-import { getCharacterById, CHARACTERS } from './characters.ts';
+import { CHARACTERS } from './characters.ts';
 import { ROOM_TEMPLATES } from './rooms.ts';
 import { ITEMS, OMENS, CLUES, PUZZLES } from './itemsAndOmens.ts';
 import { EVENTS } from './events.ts';
@@ -44,7 +44,7 @@ export function validateSavedGameState(v: unknown): string | null {
   if (!isRecord(v)) return 'Game state is not an object.';
   if (v.schemaVersion !== 1 || !str(v.gameId, 128) || !str(v.seed, 128) ||
       !num(v.rngState, -4_294_967_296, 4_294_967_296) ||
-      !integer(v.version) || !integer(v.turn) || v.turn < 1 ||
+      !integer(v.version) || !integer(v.turn, 1) ||
       !['short', 'standard', 'extended'].includes(String(v.expeditionSize)) ||
       typeof v.isMultiplayer !== 'boolean' || !phases.has(String(v.phase)) ||
       !integer(v.currentPlayerIndex, 0, 3) || !num(v.pressure, 0, 100) ||
@@ -130,19 +130,9 @@ export function validateSavedGameState(v: unknown): string | null {
       !integer(player.soloTurnsCount)) {
     return 'Malformed explorer state.';
   }
-  // Agy character IDs are intentional; a Haunted legacy save is not compatible.
-  getCharacterById(player.characterId as string);
   if (!hasOnlyStrings(v.omensFound, omens) || !hasOnlyStrings(v.cluesFound, clues) ||
       !hasOnlyStrings(v.usedEventIds, events) || !stringArray(v.memoryFlags) ||
-      !stringArray(v.processedActionIds, 2000) ||
-      !stringArray(v.journal, 200)) {
-    // Journal is an object array and is checked separately below.
-    if (!Array.isArray(v.journal) || v.journal.length > 200)
-      return 'Malformed discovery collections.';
-    if (!hasOnlyStrings(v.omensFound, omens) || !hasOnlyStrings(v.cluesFound, clues) ||
-        !hasOnlyStrings(v.usedEventIds, events) || !stringArray(v.memoryFlags) ||
-        !stringArray(v.processedActionIds, 2000)) return 'Malformed discovery collections.';
-  }
+      !stringArray(v.processedActionIds, 2000)) return 'Malformed discovery collections.';
   if (!Array.isArray(v.journal) || v.journal.length > 200 ||
       v.journal.some(j => !isRecord(j) || !str(j.id, 128) || !integer(j.turn) ||
         !str(j.title, 300) || !str(j.text, 4000))) return 'Malformed journal.';
