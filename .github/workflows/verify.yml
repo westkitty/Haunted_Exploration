@@ -31,3 +31,36 @@ jobs:
         run: bun run test:midnight
       - name: Production build
         run: bun run build
+
+  browser:
+    name: Chromium end-to-end solo expedition
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install locked runtime dependencies
+        run: bun install --frozen-lockfile
+      - name: Install test-only Chromium driver
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.55.1
+          npx playwright install --with-deps chromium
+      - name: Browser save and Last Midnight journeys
+        run: |
+          bunx vite --host 127.0.0.1 --port 4173 > /tmp/haunted-vite.log 2>&1 &
+          for n in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/ > /dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4173/ > /dev/null
+          bun scripts/browser_expedition.mjs
+      - name: Upload Vite log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: haunted-vite-browser-log
+          path: /tmp/haunted-vite.log
+          if-no-files-found: ignore
