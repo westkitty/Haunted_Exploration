@@ -194,4 +194,4 @@ function run(): void {
   }));
 }
 
-if (import.meta.main) run();
+if (process.argv[1]?.endsWith('verify_last_midnight.ts')) run();

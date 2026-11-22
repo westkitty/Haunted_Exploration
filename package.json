@@ -13,7 +13,8 @@
     "typecheck": "tsc --noEmit",
     "test:save": "tsx scripts/verify_save_import.ts",
     "test:engine": "tsx scripts/verify_game.ts",
-    "verify": "npm run typecheck && npm run test:save && npm run test:engine && npm run build"
+    "verify": "npm run typecheck && npm run test:save && npm run test:engine && npm run test:midnight && npm run build",
+    "test:midnight": "tsx scripts/verify_last_midnight.ts"
   },
   "dependencies": {
     "@firebase/eslint-plugin-security-rules": "^0.0.2",

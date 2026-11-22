@@ -27,5 +27,7 @@ jobs:
         run: bun run test:save
       - name: Engine, graph and local multiplayer regression
         run: bun run test:engine
+      - name: Deterministic Last Midnight journey
+        run: bun run test:midnight
       - name: Production build
         run: bun run build

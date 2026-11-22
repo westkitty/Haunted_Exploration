@@ -10,12 +10,13 @@ import {
 
 const values = new Map<string, string>();
 let writes = 0;
+let denyWrites = false;
 Object.defineProperty(globalThis, 'localStorage', {
   configurable: true,
   value: {
     getItem: (key: string) => values.get(key) ?? null,
-    setItem: (key: string, value: string) => { writes++; values.set(key, value); },
-    removeItem: (key: string) => { writes++; values.delete(key); },
+    setItem: (key: string, value: string) => { if (denyWrites) throw new Error('QuotaExceededError'); writes++; values.set(key, value); },
+    removeItem: (key: string) => { if (denyWrites) throw new Error('StorageDenied'); writes++; values.delete(key); },
   },
 });
 
@@ -62,4 +63,9 @@ if (loaded.ok) {
   assert.equal(loaded.state.players[0].roomId, candidate.players[0].roomId);
 }
 
-console.log('PASS: staged import is side-effect-free; invalid nested saves fail; v1 round-trip succeeds.');
+const beforeFailure = values.get('thtr_active_save_v1');
+denyWrites = true;
+assert.equal(saveActiveGame(original), false, 'Quota error must be reported to UI');
+assert.equal(values.get('thtr_active_save_v1'), beforeFailure, 'Failed autosave must not overwrite old bytes');
+denyWrites = false;
+console.log('PASS: side-effect-free import; invalid nested saves; v1 round-trip; storage refusal preserves old save.');
