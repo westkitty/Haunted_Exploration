@@ -28,8 +28,8 @@ BUN_VERSION="$(bun --version)"
 # The committed bun.lock uses lockfileVersion 2; Bun 1.3.13 rejects it.
 # Stop before downloading dependencies if the local toolchain is too old.
 case "$BUN_VERSION" in
-  0.*|1.0.*|1.1.*|1.2.*|1.3.*|1.4.0|1.4.1|1.4.2|1.4.3|1.4.4)
-    fail "Bun $BUN_VERSION cannot read the committed bun.lock v2. Upgrade to stable 1.4.5+ using the original installer (Homebrew: brew upgrade bun; standalone Bun: bun upgrade --stable). Never delete or regenerate the frozen lockfile."
+  0.*|1.0.*|1.1.*|1.2.*|1.3.*)
+    fail "Bun $BUN_VERSION cannot read the committed bun.lock v2. Use Bun 1.4.0+ (stable 1.4.5 recommended) via the original installer (Homebrew: brew upgrade bun; standalone Bun: bun upgrade --stable). Never delete or regenerate the frozen lockfile."
     ;;
 esac
 CHROME_PATH="$(printenv HAUNTED_CHROMIUM_PATH || true)"

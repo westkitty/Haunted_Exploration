@@ -66,4 +66,4 @@ Last inspected: 2026-11-22. This file tracks verified work, not an aspirational 
 
 ## P006 local Bun compatibility failure (2026-11-22)
 - User's MacBook Air clone at `/Users/andrew/Haunted_Exploration_P006` correctly identified host `MacBook-Air.local`, authorized integration branch and head `1fb2311fffb387378247e1f1ac4ef2ef42add5cf`; Chrome 157.0.8103.79; Bun 1.3.13. Install aborted before browser start because the committed `bun.lock` `lockfileVersion: 2` was unknown to that old Bun. **P006 hardware result still UNKNOWN.**
-- Guard added: `scripts/run_p006_hardware.sh` checks known-compatible Bun 1.4.5+ before any dependency download. Lockfile unchanged. DEX//REACH confirmed root/branch/remote but refused a diagnostic shell command due high CPU pressure; no remote mutation performed.
+- Guard added: `scripts/run_p006_hardware.sh` checks Bun 1.4.0+ (stable 1.4.5 recommended) before any dependency download. Lockfile unchanged. DEX//REACH confirmed root/branch/remote but refused a diagnostic shell command due high CPU pressure; no remote mutation performed.

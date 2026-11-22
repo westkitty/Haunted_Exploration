@@ -13,7 +13,7 @@
 
 The verified MacBook Air clone at `1fb2311fffb387378247e1f1ac4ef2ef42add5cf` passed environment checks but stopped at `bun install --frozen-lockfile`: Bun `1.3.13` reported `Unknown lockfile version` for `bun.lock` using `lockfileVersion: 2`. The later frozen-lockfile error is a cascade. No GPU/browser measurement ran. The new guard checks Bun before dependency installation.
 
-Use a known-compatible stable Bun `1.4.5` or newer by upgrading it **with its original package manager**. For Homebrew installations use `brew upgrade bun`; for standalone `~/.bun` installations use `bun upgrade --stable`. Check `command -v bun` to establish which install is active. Never delete or regenerate the committed lockfile, bypass `--frozen-lockfile`, or force an npm-only dependency resolution for a measured baseline.
+Use Bun `1.4.0` or newer (latest stable `1.4.5` recommended) by upgrading it **with its original package manager**. For Homebrew installations use `brew upgrade bun`; for standalone `~/.bun` installations use `bun upgrade --stable`. Check `command -v bun` to establish which install is active. Never delete or regenerate the committed lockfile, bypass `--frozen-lockfile`, or force an npm-only dependency resolution for a measured baseline.
 
 ## Hardware requirements
 
