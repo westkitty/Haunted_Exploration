@@ -61,3 +61,13 @@ All phases 30 seconds. Intervals are **milliseconds between rendered loop iterat
 
 ## CI handling
 P006 is an exploratory strict capture, not a gameplay release requirement; its failure must remain visible and its raw evidence must be preserved. Routine push CI runs the existing P003/P004 browser gate. A **manual `workflow_dispatch`** run additionally invokes this P006 benchmark and uploads the raw JSON artifact. This prevents an inconclusive software-fallback measurement from misrepresenting passing gameplay checks or multiplying CI expense on documentation edits.
+
+## Hardware-access continuation addendum (2026-11-22)
+
+**Current outcome:** hardware measurement BLOCKED by environment, not by a failed GPU benchmark. DEX//REACH reported `[]` online nodes. Desktop Commander listed MacBook Air offline. No remote execution took place and no new performance increase is claimed.
+
+The read-only source audit found module-level `_geoCache` geometry keyed by shape/dimensions/segments and tagged `userData.shared`, plus shared plaque/material caches and WeakMap-per-texture bundles. `disposeObjectTree` intentionally excludes shared geometry and materials, so the observed initial-step resource growth is compatible with reuse. Its full memory lifetime across different procedural seeds and repeated manager creation has **not** been verified; do not call it a fixed or confirmed leak.
+
+Added a hardware-gated, executable on-device handoff in [P006_HARDWARE_MEASUREMENT_HANDOFF.md](P006_HARDWARE_MEASUREMENT_HANDOFF.md), with `scripts/run_p006_hardware.sh` for identity-checked macOS Chrome measurement and `scripts/compare_p006_hardware.mjs` for matched evidence. The hardware mode refuses software/virtual GL identifiers and captures per-phase screenshots for human continuity review. `getSharedRoomCacheStats()` is read-only and available only through the dev-only `?perf=1` measurement handle. **No visual quality or rendering policy changed.**
+
+Provisional after/before requirement: same real GPU, OS, browser version, viewport, DPR, default quality, seed, scenario phase order and capture duration, plus green full-game CI and manual screenshot parity. With no hardware baseline, no performance fix or release verdict is supportable.
