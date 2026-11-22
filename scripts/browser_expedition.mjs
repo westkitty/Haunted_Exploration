@@ -142,6 +142,16 @@ try {
   assert.equal(await savedRaw(page), originalRaw, 'Staging must not overwrite original bytes');
   await page.getByRole('button', { name: 'Cancel Import' }).click();
   assert.equal(await savedRaw(page), originalRaw, 'Cancel preserves original bytes');
+  // The separate Settings save-import path must obey the same cancel contract.
+  await page.getByRole('button', { name: 'Settings', exact: true }).click();
+  const settings = page.getByRole('dialog', { name: 'Manor Settings' });
+  await settings.getByRole('tab', { name: 'Saves' }).click();
+  await settings.locator('input[type=file]').setInputFiles({
+    name: 'last-midnight-v1.json', mimeType: 'application/json', buffer: Buffer.from(rawFixture),
+  });
+  await settings.getByRole('button', { name: 'Cancel', exact: true }).click();
+  assert.equal(await savedRaw(page), originalRaw, 'Settings cancellation preserves original bytes');
+  await settings.getByRole('button', { name: 'Close settings' }).click();
   await importFile(page);
   await page.getByRole('button', { name: 'Confirm Save Replacement' }).click();
   await expectContains(page, 'The Last Midnight');
