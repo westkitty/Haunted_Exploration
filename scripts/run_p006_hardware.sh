@@ -24,6 +24,14 @@ if [ -n "$EXPECT_SHA" ]; then [ "$SHA" = "$EXPECT_SHA" ] || fail "Expected SHA $
 for command_name in bun npm curl lsof; do
   command -v "$command_name" >/dev/null 2>&1 || fail "$command_name is required"
 done
+BUN_VERSION="$(bun --version)"
+# The committed bun.lock uses lockfileVersion 2; Bun 1.3.13 rejects it.
+# Stop before downloading dependencies if the local toolchain is too old.
+case "$BUN_VERSION" in
+  0.*|1.0.*|1.1.*|1.2.*|1.3.*|1.4.0|1.4.1|1.4.2|1.4.3|1.4.4)
+    fail "Bun $BUN_VERSION cannot read the committed bun.lock v2. Upgrade to stable 1.4.5+ using the original installer (Homebrew: brew upgrade bun; standalone Bun: bun upgrade --stable). Never delete or regenerate the frozen lockfile."
+    ;;
+esac
 CHROME_PATH="$(printenv HAUNTED_CHROMIUM_PATH || true)"
 if [ -z "$CHROME_PATH" ]; then CHROME_PATH='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'; fi
 [ -x "$CHROME_PATH" ] || fail "Chrome desktop executable unavailable: $CHROME_PATH"

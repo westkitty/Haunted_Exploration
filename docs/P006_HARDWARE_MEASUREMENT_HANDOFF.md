@@ -9,6 +9,12 @@
 - Source repositories `Betrayal_Agy` and `Haunted_Betrayal`, target `main`, public multiplayer, save schema, character canon and deployment remain protected.
 - Do not substitute SwiftShader, emulated macOS, or an arbitrary hosted browser as accelerated-GPU proof.
 
+## Local Bun lockfile compatibility incident (2026-11-22)
+
+The verified MacBook Air clone at `1fb2311fffb387378247e1f1ac4ef2ef42add5cf` passed environment checks but stopped at `bun install --frozen-lockfile`: Bun `1.3.13` reported `Unknown lockfile version` for `bun.lock` using `lockfileVersion: 2`. The later frozen-lockfile error is a cascade. No GPU/browser measurement ran. The new guard checks Bun before dependency installation.
+
+Use a known-compatible stable Bun `1.4.5` or newer by upgrading it **with its original package manager**. For Homebrew installations use `brew upgrade bun`; for standalone `~/.bun` installations use `bun upgrade --stable`. Check `command -v bun` to establish which install is active. Never delete or regenerate the committed lockfile, bypass `--frozen-lockfile`, or force an npm-only dependency resolution for a measured baseline.
+
 ## Hardware requirements
 
 An explicitly selected and authorized macOS desktop with physical GPU acceleration, active GUI session, at least 3 GiB free, Git, Bun, npm and Google Chrome already installed. The shell runner checks hostname, OS, Git origin, branch, clean tracked worktree, optional SHA, disk, Chrome executable and local TCP port before installing dependencies. No operating-system software is installed. Dependencies are installed **only in this benchmark checkout**; browser data and files remain local. No pushes, merges, deletions, deployments or external account changes occur.

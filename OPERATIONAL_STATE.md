@@ -63,3 +63,7 @@ Last inspected: 2026-11-22. This file tracks verified work, not an aspirational 
 - **Validation:** GitHub Actions `45011127404` verified the script syntax gate, TypeScript, save tests, engine tests, deterministic Last Midnight, and production build. At the time of authoring, its Chromium gameplay job was still in progress; final run status must be checked again before closure.
 - **Decision:** **NO OPTIMIZATION**. No source-quality, save, game-rule, cloud, renderer lifecycle or shared-resource disposal changes were justified. Hardware measurements, multiple-scenario cache growth and visual comparisons remain outstanding.
 - **Safe rollback baseline:** `bdbeb44cb0b6f1fbc8f65f1955016180409bba10` (before current diagnostic-only code changes). Keep all work on `integration/agy-haunted-p001-p003`; no force push, merge or deploy.
+
+## P006 local Bun compatibility failure (2026-11-22)
+- User's MacBook Air clone at `/Users/andrew/Haunted_Exploration_P006` correctly identified host `MacBook-Air.local`, authorized integration branch and head `1fb2311fffb387378247e1f1ac4ef2ef42add5cf`; Chrome 157.0.8103.79; Bun 1.3.13. Install aborted before browser start because the committed `bun.lock` `lockfileVersion: 2` was unknown to that old Bun. **P006 hardware result still UNKNOWN.**
+- Guard added: `scripts/run_p006_hardware.sh` checks known-compatible Bun 1.4.5+ before any dependency download. Lockfile unchanged. DEX//REACH confirmed root/branch/remote but refused a diagnostic shell command due high CPU pressure; no remote mutation performed.
