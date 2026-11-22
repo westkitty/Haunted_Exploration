@@ -116,7 +116,7 @@ export function validateSavedGameState(v: unknown): string | null {
   if (!isRecord(player) || !str(player.id, 128) || !str(player.displayName, 128) ||
       !characters.has(String(player.characterId)) ||
       !Object.hasOwn(rooms, String(player.roomId)) ||
-      !isRecord(player.stats) || !['body', 'grace', 'insight', 'nerve'].every(k => num(player.stats[k], -10, 30)) ||
+      !isRecord(player.stats) || !['body', 'grace', 'insight', 'nerve'].every(k => num((player.stats as RecordValue)[k], -10, 30)) ||
       !num(player.maxHealth, 1, 100) || !num(player.health, 0, player.maxHealth as number) ||
       !num(player.maxFear, 1, 100) || !num(player.fear, 0, player.maxFear as number) ||
       !num(player.maxActionPoints, 1, 20) || !num(player.actionPoints, 0, player.maxActionPoints as number) ||
