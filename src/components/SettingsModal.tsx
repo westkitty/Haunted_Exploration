@@ -76,7 +76,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
+    setPendingImport(null);
+    setImportError(null);
+    // Reject oversized files before reading or parsing attacker-controlled JSON.
+    if (file.size > 1_048_576) {
+      setImportError('Save file is too large (maximum 1 MiB).');
+      return;
+    }
     const reader = new FileReader();
+    reader.onerror = () => setImportError('The selected save file could not be read.');
     reader.onload = () => {
       const text = String(reader.result ?? '');
       const res = importSaveJson(text);
