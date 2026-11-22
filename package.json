@@ -9,7 +9,11 @@
     "build": "NODE_ENV=production vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "test:save": "tsx scripts/verify_save_import.ts",
+    "test:engine": "tsx scripts/verify_game.ts",
+    "verify": "npm run typecheck && npm run test:save && npm run test:engine && npm run build"
   },
   "dependencies": {
     "@firebase/eslint-plugin-security-rules": "^0.0.2",
