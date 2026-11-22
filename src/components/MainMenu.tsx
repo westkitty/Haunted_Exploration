@@ -54,23 +54,31 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [confirmOverwrite, setConfirmOverwrite] = useState<boolean>(false);
+  const [pendingImport, setPendingImport] = useState<GameState | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = '';
+    setPendingImport(null);
+    setImportError(null);
+    if (file.size > 1_048_576) {
+      setImportError('Save file is too large (maximum 1 MiB).');
+      return;
+    }
     const reader = new FileReader();
+    reader.onerror = () => setImportError('The selected save file could not be read.');
     reader.onload = () => {
       const text = String(reader.result ?? '');
       const res = importSaveJson(text);
       if (res.ok) {
-        setImportError(null);
-        onImportSave(res.state);
+        if (hasSave) setPendingImport(res.state);
+        else onImportSave(res.state);
       } else {
         setImportError(res.error);
       }
     };
     reader.readAsText(file);
-    e.target.value = '';
   };
 
   return (
@@ -263,8 +271,25 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             />
           </div>
 
+          {pendingImport && (
+            <div role="group" aria-label="Confirm save replacement" className="mt-3 space-y-2 border border-[#a8453d] bg-[#261513]/95 p-3">
+              <p className="text-xs text-[#f4d2cc]">
+                Replace your existing saved expedition with {pendingImport.seed} · turn {pendingImport.turn}?
+              </p>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { onImportSave(pendingImport); setPendingImport(null); }}
+                  className="tactile-btn flex-1 bg-[#c59956] px-3 py-2 text-xs font-semibold text-[#160f09]">
+                  Confirm Save Replacement
+                </button>
+                <button type="button" onClick={() => setPendingImport(null)}
+                  className="tactile-btn border border-[#c99c52]/40 px-3 py-2 text-xs text-[#f4ead7]">
+                  Cancel Import
+                </button>
+              </div>
+            </div>
+          )}
           {importError && (
-            <p className="mt-3 text-xs text-[#f2aca4] bg-[#361614]/92 border border-[#a8453d] px-3 py-2">
+            <p role="alert" className="mt-3 text-xs text-[#f2aca4] bg-[#361614]/92 border border-[#a8453d] px-3 py-2">
               {importError}
             </p>
           )}

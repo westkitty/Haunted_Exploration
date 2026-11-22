@@ -10,6 +10,7 @@ import { findRoomPath } from './engine/pathfinding';
 import { getRoomTemplate } from './engine/rooms';
 import {
   clearActiveGame,
+  exportSaveJson,
   loadActiveGame,
   loadArchive,
   loadMpResumeRef,
@@ -262,6 +263,7 @@ function InnerApp() {
   const [screen, setScreen] = useState<AppScreen>('menu');
   const [sessionMode, setSessionMode] = useState<ActiveSessionMode>('solo');
   const [gameState, setGameState] = useState<GameState | null>(null);
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const [localPlayerId, setLocalPlayerId] = useState<string>('solo_player');
 
   const [cameraMode, setCameraMode] = useState<CameraMode>('dollhouse');
@@ -433,7 +435,9 @@ function InnerApp() {
 
   // Sync settings to AudioDirector, SceneManager, localStorage, and root html font-size (fixes Text Scale: Large!)
   useEffect(() => {
-    saveSettings(settings);
+    if (!saveSettings(settings)) {
+      setStorageWarning((previous) => previous ?? 'Browser storage is unavailable. Settings may not survive a reload.');
+    }
     audioRef.current?.updateSettings(settings);
     sceneRef.current?.setReducedMotion(settings.reducedMotion);
     document.documentElement.style.fontSize = settings.textScale === 'large' ? '115%' : '100%';
@@ -484,6 +488,38 @@ function InnerApp() {
     }
   }, []);
 
+  // A failed save never becomes a false success badge. Preserve the in-memory run
+  // and offer an independent JSON export while localStorage is unavailable.
+  const persistSoloSave = useCallback((state: GameState) => {
+    if (saveActiveGame(state)) {
+      setSavedSummary({ hasSave: true, seed: state.seed, turn: state.turn });
+      setStorageWarning(null);
+      return true;
+    }
+    const previous = loadActiveGame();
+    setSavedSummary(previous.ok
+      ? { hasSave: true, seed: previous.state.seed, turn: previous.state.turn }
+      : { hasSave: false });
+    setStorageWarning('Autosave failed. Your expedition is still running in memory. Download a save before closing or reloading this tab.');
+    return false;
+  }, []);
+
+  const downloadRecoverySave = useCallback(() => {
+    const state = stateRef.current;
+    if (!state || state.isMultiplayer) return;
+    try {
+      const blob = new Blob([exportSaveJson(state)], { type: 'application/json' });
+      const href = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = href;
+      link.download = `haunted-recovery-${state.seed.toLowerCase()}-t${state.turn}.json`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(href), 1000);
+    } catch {
+      setStorageWarning('Recovery download failed. Keep this tab open and retry the export.');
+    }
+  }, []);
+
   // Authoritative Action Dispatch (handles Solo, Live WebSocket, and Cloud Firestore)
   const dispatchAction = useCallback(
     async (partialAction: GameActionInput) => {
@@ -507,12 +543,7 @@ function InnerApp() {
           return;
         }
         setGameState(res.state);
-        saveActiveGame(res.state);
-        setSavedSummary({
-          hasSave: true,
-          seed: res.state.seed,
-          turn: res.state.turn,
-        });
+        persistSoloSave(res.state);
         if (partialAction.type === 'END_TURN') {
           audioRef.current?.playCue('turn_bell');
           const nextMe = res.state.players.find((p) => p.id === pid);
@@ -586,7 +617,7 @@ function InnerApp() {
         }
       }
     },
-    [showToast, spawnBoardPopup]
+    [persistSoloSave, showToast, spawnBoardPopup]
   );
 
   // Schedule smooth hop-by-hop auto-walk across 1..N connected rooms, optionally followed by a room action or UI callback
@@ -850,11 +881,17 @@ function InnerApp() {
       setFloorFilter('all');
       if (lastRecordedEndingIdRef.current !== gameState.gameId) {
         lastRecordedEndingIdRef.current = gameState.gameId;
-        recordExpeditionToArchive(gameState);
+        const recorded = recordExpeditionToArchive(gameState);
         setArchiveEntries(loadArchive());
         if (!gameState.isMultiplayer) {
-          clearActiveGame();
-          setSavedSummary({ hasSave: false });
+          if (!recorded) {
+            setStorageWarning('The ending could not be archived. Download your completed expedition before leaving.');
+          } else if (clearActiveGame()) {
+            setSavedSummary({ hasSave: false });
+            setStorageWarning(null);
+          } else {
+            setStorageWarning('The ending was archived, but the old save could not be cleared. Export your ending if needed.');
+          }
         } else {
           saveMpResumeRef(null);
           setMpResumeRef(null);
@@ -1094,8 +1131,7 @@ function InnerApp() {
     setSessionMode('solo');
     setLocalPlayerId('solo_player');
     setGameState(state);
-    saveActiveGame(state);
-    setSavedSummary({ hasSave: true, seed: state.seed, turn: state.turn });
+    persistSoloSave(state);
     setCameraMode('dollhouse');
     setFloorFilter('all');
     setScreen('playing');
@@ -1131,8 +1167,7 @@ function InnerApp() {
     setSessionMode('solo');
     setLocalPlayerId(imported.players[0].id);
     setGameState(imported);
-    saveActiveGame(imported);
-    setSavedSummary({ hasSave: true, seed: imported.seed, turn: imported.turn });
+    persistSoloSave(imported);
     setCameraMode('dollhouse');
     setFloorFilter('all');
     setScreen('playing');
@@ -1232,6 +1267,19 @@ function InnerApp() {
     <div className="relative w-screen h-screen overflow-hidden bg-[#0b0908] text-[#f2e8d5] select-none">
       {/* ISOLATED 3D WEBGL CANVAS HOST (zero React children) */}
       <div ref={canvasHostRef} className="fixed inset-0 z-0" />
+
+      {storageWarning && (
+        <div role="alert" aria-live="assertive" className="fixed left-1/2 top-3 z-[100] w-[min(95vw,620px)] -translate-x-1/2 border border-[#e7a56a] bg-[#291914]/95 p-3 text-sm text-[#fff1dc] shadow-2xl">
+          <p className="font-semibold">Save storage warning</p>
+          <p className="mt-1 text-xs leading-relaxed">{storageWarning}</p>
+          {gameState && !gameState.isMultiplayer && (
+            <button type="button" onClick={downloadRecoverySave}
+              className="tactile-btn mt-2 border border-[#e7a56a] px-3 py-1.5 text-xs font-semibold text-[#fff1dc]">
+              Download Current Save
+            </button>
+          )}
+        </div>
+      )}
 
       {/* MAIN MENU */}
       {screen === 'menu' && (

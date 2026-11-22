@@ -37,11 +37,12 @@ export function loadSettings(): GameSettings {
   }
 }
 
-export function saveSettings(settings: GameSettings): void {
+export function saveSettings(settings: GameSettings): boolean {
   try {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    return true;
   } catch {
-    // Ignore quota errors safely
+    return false;
   }
 }
 
@@ -114,11 +115,12 @@ export function hasSavedGame(): boolean {
   return res.ok;
 }
 
-export function clearActiveGame(): void {
+export function clearActiveGame(): boolean {
   try {
     localStorage.removeItem(SAVE_KEY);
+    return true;
   } catch {
-    // noop
+    return false;
   }
 }
 
@@ -190,10 +192,11 @@ export function recordExpeditionToArchive(state: GameState): ExpeditionArchiveEn
     const existing = loadArchive().filter((e) => !e.id.startsWith(`${state.gameId}_`));
     const updated = [entry, ...existing].slice(0, 24);
     localStorage.setItem(ARCHIVE_KEY, JSON.stringify(updated));
+    return entry;
   } catch {
-    // noop
+    // The archive must not be reported as recorded when persistence failed.
+    return null;
   }
-  return entry;
 }
 
 export function saveMpResumeRef(ref: { mode: 'firebase' | 'ws'; code: string; playerId: string; displayName: string } | null): void {
