@@ -19,7 +19,7 @@ Last inspected: 2026-11-22. This file tracks verified work, not an aspirational 
 - P002: source ownership documented in docs/ARCHITECTURE_DECISIONS.md; Agy designated sole engine/render/UI owner; no Haunted source wholesale merged. Narrative canon decisions pending.
 - P003: VERIFIED for scoped solo saving/import. Side-effect-free import; 1 MiB limit; deep nested save checks; both Main Menu and Settings import cancel retain byte-identical old save; storage-denied autosave yields persistent warning and manual JSON recovery download; failed archive write does not delete saved ending. Bun tests and real Chromium proof passed on d4e6206e3e46258e6145f25ff439fa7c3d141ebf (Actions run 45008149328, Chromium 157.0.8103.78).
 - P004: VERIFIED for bounded Last Midnight solo scope: natural seed P004-LMID-005 triggers at turn 2 via legal actions; 3 distinct reachable clocks, victory turn 4, countdown loss turn 13, mid-Revelation save/resume, archived endings, visible 2D map/HUD navigation, main-menu return. Both engine and real Chromium tests passed in Actions run 45008149328. Other scenarios remain unchanged in code; device/manual experience review still outstanding.
-- P006: actual browser performance baseline and matched after-trace pending.
+- P006: instrumented five-phase Chromium/SwiftShader **diagnostic** captured in run 45009378423 at code commit b415d0f6b250e0c558cf28c19dbce93034ec7167; raw JSON artifact 14749810208; verdict INCOMPLETE (first Revelation phase only 10 frames versus predeclared 12 minimum). Menu 30s p50 1487ms, Revelation 2200ms; software renderer GPU-fence pacing likely dominates, CPU simulation 0.10-0.24ms/observed frame; CPU render submission ~4.9-5.6ms. One-time after-unload renderer.info growth +28 geometries and +3 textures, flat over second load/unload (may reflect caches, root cause unproven). See docs/P006_PERFORMANCE_LIFECYCLE.md. No rendering or quality optimization shipped, no matched before/after or hardware verdict. Performance capture moved to manual workflow_dispatch so routine regression CI remains the release-relevant gate.
 
 ## Known source-level defects and risks
 - Original Agy import-before-confirm data-loss defect is fixed and verified in third-version tests; source Agy remains unchanged.
@@ -46,3 +46,9 @@ Last inspected: 2026-11-22. This file tracks verified work, not an aspirational 
 - Browser: system Chrome / Chromium `157.0.8103.78`, runner Ubuntu 26.04, served via loopback Vite only. No deployment, no live cloud backend.
 - Archive and storage failure protections validated for tested paths; see `docs/P003_P004_QA_EVIDENCE_2026-11-22.md`.
 - No P006 performance proof, and do not infer real-player feel or all-device support from headless Chromium.
+
+## P006 continuation checkpoint
+- Baseline before instrumentation: `832bdec0f4cdebc7f093646584f3f8e73c1dfe45`; instrumentation: `46d5da8e5d3df9853ca280d94f6432d01582e5de`.
+- Initial 6.5s exploratory capture 45009113378 failed minimum 12 frames; 30s re-sampling 45009378423 produced five phases but one low-confidence phase (10 frames). Both intentionally BLOCK claims of measured performance pass.
+- Code `scripts/browser_performance.mjs` and `?perf=1` dev-only handle remain for strict future capture. The report retains exact results and hypotheses. P003/P004 still passed the standard verification and Chromium UI replay on both diagnostic runs.
+- GitHub Actions normal push continues P003/P004 regression. Manual `workflow_dispatch` opts into heavy P006 diagnostic and artifact upload; this change prevents inconclusive test-only sampling from masking the healthy gameplay gate.

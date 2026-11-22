@@ -1,0 +1,98 @@
+{
+  "formatVersion": 1,
+  "status": "incomplete",
+  "source": "GitHub Actions run 45009378423 browser logs / artifact 14749810208",
+  "codeSha": "b415d0f6b250e0c558cf28c19dbce93034ec7167",
+  "benchmarkContract": "p006-loopback-menu-midnight-return-v1 revision2",
+  "device": "Hosted Ubuntu 26.04 x64 headless Chromium software WebGL SwiftShader",
+  "viewport": {
+    "width": 1280,
+    "height": 720,
+    "dpr": 1
+  },
+  "stageDurationMs": 30000,
+  "sampleMinimum": {
+    "softwareGL": 12
+  },
+  "artifactUrl": "https://github.com/westkitty/Haunted_Exploration/actions/runs/45009378423/artifacts/14749810208",
+  "phases": [
+    {
+      "name": "menu-initial",
+      "samples": 16,
+      "p50IntervalMs": 1487,
+      "p95IntervalMs": 1890.3,
+      "meanSimulationMs": 0.175,
+      "meanSubmissionMs": 5.263,
+      "geometries": 129,
+      "textures": 36,
+      "programs": 33,
+      "calls": 479,
+      "triangles": 54880
+    },
+    {
+      "name": "midnight-initial",
+      "samples": 10,
+      "p50IntervalMs": 2199.5,
+      "p95IntervalMs": 3229,
+      "meanSimulationMs": 0.24,
+      "meanSubmissionMs": 5.64,
+      "geometries": 154,
+      "textures": 39,
+      "programs": 33,
+      "calls": 503,
+      "triangles": 64812
+    },
+    {
+      "name": "menu-return-1",
+      "samples": 18,
+      "p50IntervalMs": 1471.1,
+      "p95IntervalMs": 2324.3,
+      "meanSimulationMs": 0.133,
+      "meanSubmissionMs": 5.106,
+      "geometries": 157,
+      "textures": 39,
+      "programs": 33,
+      "calls": 473,
+      "triangles": 52802
+    },
+    {
+      "name": "midnight-resumed",
+      "samples": 12,
+      "p50IntervalMs": 2115.1,
+      "p95IntervalMs": 3394.7,
+      "meanSimulationMs": 0.142,
+      "meanSubmissionMs": 5.15,
+      "geometries": 157,
+      "textures": 39,
+      "programs": 33,
+      "calls": 506,
+      "triangles": 65054
+    },
+    {
+      "name": "menu-return-2",
+      "samples": 14,
+      "p50IntervalMs": 1642.6,
+      "p95IntervalMs": 2593.2,
+      "meanSimulationMs": 0.1,
+      "meanSubmissionMs": 4.871,
+      "geometries": 157,
+      "textures": 39,
+      "programs": 33,
+      "calls": 474,
+      "triangles": 53454
+    }
+  ],
+  "deltaAfterSecondReturn": {
+    "geometries": 28,
+    "textures": 3,
+    "programs": 0
+  },
+  "notVerified": [
+    "hardware GPU",
+    "mobile",
+    "thermal",
+    "long session stability",
+    "root cause",
+    "performance uplift"
+  ]
+}
