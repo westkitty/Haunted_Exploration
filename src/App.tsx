@@ -808,7 +808,23 @@ function InnerApp() {
     manager.syncGameState(previewState, 'preview');
     sceneRef.current = manager;
 
+    // Deliberately restricted to an explicit local DEV URL. The production
+    // bundle exposes no benchmarking handle, and rendering remains unchanged.
+    const enablePerfProbe = import.meta.env.DEV &&
+      new URLSearchParams(window.location.search).get('perf') === '1';
+    if (enablePerfProbe) {
+      Object.defineProperty(window, '__HAUNTED_P006__', {
+        configurable: true,
+        value: {
+          start: () => manager.beginPerformanceCapture(),
+          stop: () => manager.stopPerformanceCapture(),
+          read: () => manager.readPerformanceCapture(),
+        },
+      });
+    }
+
     return () => {
+      if (enablePerfProbe) Reflect.deleteProperty(window, '__HAUNTED_P006__');
       clearScheduledWalks();
       manager.dispose();
       sceneRef.current = null;

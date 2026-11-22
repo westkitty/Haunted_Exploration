@@ -263,6 +263,52 @@ export class MansionSceneManager {
   private tickLoopFn: (() => void) | null = null;
   private disposed = false;
 
+  // P006: Opt-in benchmark samples from the EXISTING render loop only.
+  // Disabled in normal use; no extra requestAnimationFrame or scene ownership.
+  private performanceCaptureActive = false;
+  private performancePreviousFrameAt = 0;
+  private performanceFrameSamples: Array<{
+    intervalMs: number;
+    simulationMs: number;
+    renderSubmissionMs: number;
+  }> = [];
+
+  public beginPerformanceCapture(): void {
+    this.performanceFrameSamples = [];
+    this.performancePreviousFrameAt = 0;
+    this.performanceCaptureActive = true;
+  }
+
+  public stopPerformanceCapture(): void {
+    this.performanceCaptureActive = false;
+  }
+
+  public readPerformanceCapture() {
+    const info = this.renderer.info;
+    return {
+      softwareGL: this.isSoftwareGl,
+      pixelRatio: this.renderer.getPixelRatio(),
+      cameraMode: this.cameraMode,
+      floorFilter: this.floorFilter,
+      postprocessing: Boolean(this.composer && !this.isSoftwareGl),
+      canvas: { width: this.renderer.domElement.width, height: this.renderer.domElement.height },
+      scene: {
+        phase: this.currentState?.phase ?? null,
+        roomCount: this.roomMeshes.size,
+        ghostCount: this.ghostMeshes.size,
+        playerCount: this.playerMeshes.size,
+      },
+      renderer: {
+        geometries: info.memory.geometries,
+        textures: info.memory.textures,
+        programs: info.programs?.length ?? null,
+        calls: info.render.calls,
+        triangles: info.render.triangles,
+      },
+      samples: this.performanceFrameSamples.slice(),
+    };
+  }
+
   constructor(container: HTMLElement, callbacks: MansionSceneCallbacks) {
     this.container = container;
     this.callbacks = callbacks;
@@ -1561,15 +1607,30 @@ export class MansionSceneManager {
 
     const tick = () => {
       if (this.disposed || this.isPageHidden) return;
+      const tracking = this.performanceCaptureActive;
+      const start = tracking ? performance.now() : 0;
+      const intervalMs = tracking && this.performancePreviousFrameAt > 0
+        ? start - this.performancePreviousFrameAt : 0;
+      if (tracking) this.performancePreviousFrameAt = start;
       const dt = Math.min(0.05, this.clock.getDelta());
       const elapsed = this.clock.elapsedTime;
 
       this.updateSimulation(dt, elapsed);
+      const afterSimulation = tracking ? performance.now() : 0;
 
       if (this.composer && !this.isSoftwareGl) {
         this.composer.render();
       } else {
         this.renderer.render(this.scene, this.camera);
+      }
+
+      if (tracking && intervalMs > 0) {
+        this.performanceFrameSamples.push({
+          intervalMs,
+          simulationMs: afterSimulation - start,
+          renderSubmissionMs: performance.now() - afterSimulation,
+        });
+        if (this.performanceFrameSamples.length > 1200) this.performanceFrameSamples.shift();
       }
 
       if (this.isSoftwareGl) {
@@ -2099,6 +2160,8 @@ export class MansionSceneManager {
 
   public dispose(): void {
     this.disposed = true;
+    this.performanceCaptureActive = false;
+    this.performanceFrameSamples = [];
     this.tickLoopFn = null;
     cancelAnimationFrame(this.frameId);
     clearTimeout(this.frameId);
