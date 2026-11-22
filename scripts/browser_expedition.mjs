@@ -99,6 +99,7 @@ async function launchSolo(page) {
 }
 
 const browser = await chromium.launch({
+  executablePath: process.env.HAUNTED_CHROMIUM_PATH || undefined,
   headless: true,
   args: ['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--enable-webgl'],
 });

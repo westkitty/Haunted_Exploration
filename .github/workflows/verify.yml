@@ -47,7 +47,10 @@ jobs:
       - name: Install test-only Chromium driver
         run: |
           npm install --no-save --legacy-peer-deps --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.55.1
-          npx playwright install --with-deps chromium
+          CHROME_PATH=$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)
+          test -n "$CHROME_PATH" || { echo "No system Chrome found"; exit 2; }
+          echo "HAUNTED_CHROMIUM_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+          "$CHROME_PATH" --version
       - name: Browser save and Last Midnight journeys
         run: |
           bunx vite --host 127.0.0.1 --port 4173 > /tmp/haunted-vite.log 2>&1 &
