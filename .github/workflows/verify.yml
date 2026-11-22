@@ -60,6 +60,16 @@ jobs:
           done
           curl -fsS http://127.0.0.1:4173/ > /dev/null
           bun scripts/browser_expedition.mjs
+      - name: P006 five-phase browser performance baseline
+        run: bun scripts/browser_performance.mjs
+      - name: Upload P006 raw performance capture
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: haunted-p006-perf-capture
+          path: performance-evidence/*.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: Upload Vite log on failure
         if: failure()
         uses: actions/upload-artifact@v4
