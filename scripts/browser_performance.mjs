@@ -10,7 +10,7 @@ const scenarioId = 'p006-loopback-menu-midnight-return-v1';
 const origin = process.env.HAUNTED_TEST_ORIGIN || 'http://127.0.0.1:4173';
 const outDir = process.env.HAUNTED_PERF_OUT || 'performance-evidence';
 const fixedViewport = { width: 1280, height: 720 };
-const sampleMs = 6500;
+const sampleMs = 30000;
 const slowThresholdMs = 50;
 const errors = [];
 
@@ -120,10 +120,12 @@ async function phase(label) {
       jsHeapBytes: after.JSHeapUsedSize ?? raw.jsHeapUsedSize,
     },
   };
-  phases.push({ ...summary, rawFrames: frames });
-  console.log('P006_PHASE', JSON.stringify(summary));
-  assert.ok(intervals.length >= (raw.softwareGL ? 12 : 60),
-    'Too few frame samples to characterize phase ' + label + ': ' + intervals.length);
+  const minimumFrames = raw.softwareGL ? 12 : 60;
+  const adequateSamples = intervals.length >= minimumFrames;
+  phases.push({ ...summary, adequateSamples, minimumFrames, rawFrames: frames });
+  console.log('P006_PHASE', JSON.stringify({ ...summary, adequateSamples, minimumFrames }));
+  // Collect all phase evidence even when samples are sparse. Never claim PASS
+  // based on an interrupted or unrepresentative first phase.
   return summary;
 }
 
@@ -184,7 +186,7 @@ try {
     },
   };
   const workloadSignature = {
-    project, scenarioId, scenarioVersion: 1,
+    project, scenarioId, scenarioVersion: 2,
     browser: browser.version(),
     userAgent: await page.evaluate(() => navigator.userAgent),
     platform: await page.evaluate(() => navigator.platform),
@@ -216,8 +218,10 @@ try {
     minimumSoftwareFrameSamples: 12,
     minimumHardwareFrameSamples: 60,
   };
+  const adequatePhases = phases.every(p => p.adequateSamples);
   const record = {
     formatVersion: 1,
+    captureStatus: adequatePhases ? 'valid' : 'insufficient-samples',
     buildSha: process.env.GITHUB_SHA || 'local-uncommitted',
     runId: process.env.GITHUB_RUN_ID || 'local',
     timeUtc: new Date().toISOString(),
@@ -239,7 +243,10 @@ try {
   fs.writeFileSync(outPath, JSON.stringify(record, null, 2) + '\n');
   console.log('P006_EVIDENCE_FILE', outPath);
   console.log('P006_RESOURCE_DELTAS', JSON.stringify(recovered));
-  console.log('P006_CAPTURE_PASS', JSON.stringify({ mode: workloadSignature.mode, phases: phases.length, firstMenuReadyMs: record.firstMenuReadyMs, seed: workloadSignature.seed }));
+  console.log(adequatePhases ? 'P006_CAPTURE_PASS' : 'P006_CAPTURE_INCOMPLETE',
+    JSON.stringify({ mode: workloadSignature.mode, phases: phases.length, firstMenuReadyMs: record.firstMenuReadyMs, seed: workloadSignature.seed,
+      sampleCounts: phases.map(p => ({ label: p.label, frames: p.frameIntervals.count, minimum: p.minimumFrames })) }));
+  if (!adequatePhases) throw new Error('P006 evidence saved but has insufficient frame samples; not a passing performance baseline.');
 } finally {
   await context.close();
   await browser.close();
