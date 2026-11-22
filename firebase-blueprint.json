@@ -1,0 +1,206 @@
+{
+  "entities": {
+    "Lobby": {
+      "title": "Multiplayer Game Lobby",
+      "description": "Shared authoritative multiplayer mansion expedition state synchronized across 2-4 players.",
+      "type": "object",
+      "properties": {
+        "inviteCode": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 6,
+          "pattern": "^[A-Z0-9]{6}$",
+          "description": "6-character uppercase alphanumeric invite code."
+        },
+        "hostUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "description": "Firebase Auth UID of the lobby host."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["waiting", "active", "finished"],
+          "description": "Lifecycle status of the lobby."
+        },
+        "seed": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 64,
+          "description": "Deterministic mansion seed."
+        },
+        "expeditionSize": {
+          "type": "string",
+          "enum": ["short", "standard", "extended"],
+          "description": "Expedition pacing mode."
+        },
+        "version": {
+          "type": "integer",
+          "description": "Monotonic authoritative game state version."
+        },
+        "currentTurnUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "UID of the player whose turn is currently active."
+        },
+        "memberUids": {
+          "type": "array",
+          "description": "Bounded list of up to 4 connected player UIDs."
+        },
+        "publicState": {
+          "type": "object",
+          "description": "Native Map storing the sanitized public GameState (no secret roles)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of lobby creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last committed mutation."
+        }
+      },
+      "required": [
+        "inviteCode",
+        "hostUid",
+        "status",
+        "seed",
+        "expeditionSize",
+        "version",
+        "currentTurnUid",
+        "memberUids",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LobbyPlayer": {
+      "title": "Lobby Member Seat",
+      "description": "Public seat record for a player inside a lobby (no PII stored).",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "lobbyId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "characterId": {
+          "type": "string",
+          "enum": ["archivist", "medium", "locksmith", "physician", "magician", "heir"]
+        },
+        "ready": {
+          "type": "boolean"
+        },
+        "joinedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "lobbyId", "displayName", "characterId", "ready", "joinedAt"]
+    },
+    "PrivateRole": {
+      "title": "Private Scenario Role",
+      "description": "Strictly isolated per-player secret role and objective readable ONLY by that player.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "lobbyId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["explorer", "chosen", "mimic"]
+        },
+        "privateObjective": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "lobbyId", "role", "privateObjective", "updatedAt"]
+    },
+    "CommittedAction": {
+      "title": "Committed Game Action",
+      "description": "Append-only idempotent record of a committed player action.",
+      "type": "object",
+      "properties": {
+        "actionId": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 80,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "lobbyId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actorUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actionType": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 48
+        },
+        "resultingVersion": {
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["actionId", "lobbyId", "actorUid", "actionType", "resultingVersion", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/lobbies/{lobbyId}": {
+      "schema": { "$ref": "#/entities/Lobby" },
+      "description": "Multiplayer game lobbies indexed by invite code (lobbyId == inviteCode)."
+    },
+    "/lobbies/{lobbyId}/players/{playerUid}": {
+      "schema": { "$ref": "#/entities/LobbyPlayer" },
+      "description": "Public seat and character selection for each player in the lobby."
+    },
+    "/lobbies/{lobbyId}/privateRoles/{playerUid}": {
+      "schema": { "$ref": "#/entities/PrivateRole" },
+      "description": "Private Revelation role and objective readable exclusively by playerUid."
+    },
+    "/lobbies/{lobbyId}/actions/{actionId}": {
+      "schema": { "$ref": "#/entities/CommittedAction" },
+      "description": "Append-only action history committed atomically alongside lobby state transitions."
+    }
+  }
+}

@@ -1,0 +1,256 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Pillar 1: Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // === Global Hardened Primitives ===
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidInviteCode(code) {
+      return code is string && code.size() == 6 && code.matches('^[A-Z0-9]{6}$');
+    }
+
+    function isLobbyMember(lobbyId) {
+      return exists(/databases/$(database)/documents/lobbies/$(lobbyId))
+        && request.auth.uid in get(/databases/$(database)/documents/lobbies/$(lobbyId)).data.memberUids;
+    }
+
+    function isLobbyHost(lobbyId) {
+      return exists(/databases/$(database)/documents/lobbies/$(lobbyId))
+        && get(/databases/$(database)/documents/lobbies/$(lobbyId)).data.hostUid == request.auth.uid;
+    }
+
+    // === Validation Blueprints (Pillar 2 & Pillar 5) ===
+    function isValidLobby(data, lobbyId) {
+      return data.keys().hasAll([
+          'inviteCode', 'hostUid', 'status', 'seed', 'expeditionSize',
+          'version', 'currentTurnUid', 'memberUids', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'inviteCode', 'hostUid', 'status', 'seed', 'expeditionSize',
+          'version', 'currentTurnUid', 'memberUids', 'publicState', 'createdAt', 'updatedAt'
+        ])
+        && isValidInviteCode(data.inviteCode)
+        && data.inviteCode == lobbyId
+        && isValidId(data.hostUid)
+        && data.status in ['waiting', 'active', 'finished']
+        && data.seed is string && data.seed.size() >= 3 && data.seed.size() <= 64
+        && data.expeditionSize in ['short', 'standard', 'extended']
+        && data.version is int && data.version >= 0 && data.version <= 100000
+        && isValidId(data.currentTurnUid)
+        && data.memberUids is list
+        && data.memberUids.size() >= 1 && data.memberUids.size() <= 4
+        && data.memberUids[0] is string && isValidId(data.memberUids[0])
+        && (!('publicState' in data) || data.publicState is map)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidLobbyPlayer(data, lobbyId, playerUid) {
+      return data.keys().hasAll(['uid', 'lobbyId', 'displayName', 'characterId', 'ready', 'joinedAt'])
+        && data.keys().hasOnly(['uid', 'lobbyId', 'displayName', 'characterId', 'ready', 'joinedAt'])
+        && data.uid == playerUid
+        && isValidId(data.uid)
+        && data.lobbyId == lobbyId
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 40
+        && data.characterId in ['archivist', 'medium', 'locksmith', 'physician', 'magician', 'heir']
+        && data.ready is bool
+        && data.joinedAt is timestamp;
+    }
+
+    function isValidPrivateRole(data, lobbyId, playerUid) {
+      return data.keys().hasAll(['uid', 'lobbyId', 'role', 'privateObjective', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'lobbyId', 'role', 'privateObjective', 'updatedAt'])
+        && data.uid == playerUid
+        && isValidId(data.uid)
+        && data.lobbyId == lobbyId
+        && data.role in ['explorer', 'chosen', 'mimic']
+        && data.privateObjective is string
+        && data.privateObjective.size() >= 1 && data.privateObjective.size() <= 400
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidCommittedAction(data, lobbyId, actionId) {
+      return data.keys().hasAll(['actionId', 'lobbyId', 'actorUid', 'actionType', 'resultingVersion', 'createdAt'])
+        && data.keys().hasOnly(['actionId', 'lobbyId', 'actorUid', 'actionType', 'resultingVersion', 'createdAt'])
+        && data.actionId == actionId
+        && data.actionId is string && data.actionId.size() >= 4 && data.actionId.size() <= 80 && data.actionId.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.lobbyId == lobbyId
+        && data.actorUid == request.auth.uid
+        && isValidId(data.actorUid)
+        && data.actionType is string && data.actionType.size() >= 2 && data.actionType.size() <= 48
+        && data.resultingVersion is int && data.resultingVersion >= 1
+        && data.createdAt == request.time;
+    }
+
+    // === Collection: /lobbies/{lobbyId} ===
+    match /lobbies/{lobbyId} {
+      // Allow single-doc get by invite code for authenticated verified users joining or playing
+      allow get: if isSignedIn() && isValidInviteCode(lobbyId) && (
+        resource == null
+        || resource.data.status == 'waiting'
+        || request.auth.uid in resource.data.memberUids
+      );
+
+      // Pillar 8: Secure list query restricted strictly to lobbies the caller belongs to
+      allow list: if isSignedIn() && request.auth.uid in resource.data.memberUids;
+
+      allow create: if isSignedIn()
+        && isValidInviteCode(lobbyId)
+        && isValidLobby(incoming(), lobbyId)
+        && incoming().hostUid == request.auth.uid
+        && incoming().currentTurnUid == request.auth.uid
+        && incoming().status == 'waiting'
+        && incoming().version == 0
+        && incoming().memberUids.size() == 1
+        && incoming().memberUids[0] == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      // Action-based update branches wrapped by isValidLobby + Terminal State Lock + Immortal Field checks
+      allow update: if isSignedIn()
+        && isValidInviteCode(lobbyId)
+        && isValidLobby(incoming(), lobbyId)
+        && existing().status != 'finished'
+        && incoming().hostUid == existing().hostUid
+        && incoming().inviteCode == existing().inviteCode
+        && incoming().seed == existing().seed
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          // Action 1: Player joins a waiting lobby (appends only own UID without removing members, max 4)
+          (
+            existing().status == 'waiting'
+            && !(request.auth.uid in existing().memberUids)
+            && existing().memberUids.size() < 4
+            && incoming().memberUids.size() == existing().memberUids.size() + 1
+            && incoming().memberUids.hasAll(existing().memberUids)
+            && request.auth.uid in incoming().memberUids
+            && incoming().diff(existing()).affectedKeys().hasOnly(['memberUids', 'updatedAt'])
+          )
+          ||
+          // Action 2: Host starts the waiting lobby into active play
+          (
+            existing().status == 'waiting'
+            && existing().hostUid == request.auth.uid
+            && incoming().status == 'active'
+            && incoming().version == 1
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'version', 'currentTurnUid', 'publicState', 'updatedAt'])
+          )
+          ||
+          // Action 3: Active-turn player commits a monotonic state transition
+          (
+            existing().status == 'active'
+            && request.auth.uid in existing().memberUids
+            && existing().currentTurnUid == request.auth.uid
+            && incoming().status in ['active', 'finished']
+            && incoming().version == existing().version + 1
+            && incoming().currentTurnUid in existing().memberUids
+            && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'version', 'currentTurnUid', 'publicState', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isSignedIn()
+        && isValidInviteCode(lobbyId)
+        && existing().hostUid == request.auth.uid
+        && existing().status == 'waiting';
+
+      // === Subcollection: /lobbies/{lobbyId}/players/{playerUid} ===
+      match /players/{playerUid} {
+        allow get: if isSignedIn() && isValidInviteCode(lobbyId) && isValidId(playerUid) && (
+          request.auth.uid == playerUid || isLobbyMember(lobbyId)
+        );
+        allow list: if isSignedIn() && resource.data.lobbyId == lobbyId && isLobbyMember(lobbyId);
+
+        allow create: if isSignedIn()
+          && isValidInviteCode(lobbyId)
+          && isValidId(playerUid)
+          && request.auth.uid == playerUid
+          && isValidLobbyPlayer(incoming(), lobbyId, playerUid)
+          && incoming().joinedAt == request.time
+          && isLobbyMember(lobbyId);
+
+        allow update: if isSignedIn()
+          && isValidInviteCode(lobbyId)
+          && isValidId(playerUid)
+          && request.auth.uid == playerUid
+          && isValidLobbyPlayer(incoming(), lobbyId, playerUid)
+          && incoming().uid == existing().uid
+          && incoming().lobbyId == existing().lobbyId
+          && incoming().joinedAt == existing().joinedAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['characterId', 'ready', 'displayName'])
+          && isLobbyMember(lobbyId);
+
+        allow delete: if isSignedIn()
+          && isValidInviteCode(lobbyId)
+          && isValidId(playerUid)
+          && request.auth.uid == playerUid;
+      }
+
+      // === Subcollection: /lobbies/{lobbyId}/privateRoles/{playerUid} ===
+      // Pillar 6: Strictly isolated per-player secret role — NEVER readable by other lobby members!
+      match /privateRoles/{playerUid} {
+        allow get: if isSignedIn()
+          && isValidInviteCode(lobbyId)
+          && isValidId(playerUid)
+          && request.auth.uid == playerUid
+          && isLobbyMember(lobbyId);
+
+        allow list: if false;
+
+        allow create, update: if isSignedIn()
+          && isValidInviteCode(lobbyId)
+          && isValidId(playerUid)
+          && isValidPrivateRole(incoming(), lobbyId, playerUid)
+          && incoming().updatedAt == request.time
+          && (
+            isLobbyHost(lobbyId)
+            || (isLobbyMember(lobbyId) && get(/databases/$(database)/documents/lobbies/$(lobbyId)).data.currentTurnUid == request.auth.uid)
+          );
+
+        allow delete: if false;
+      }
+
+      // === Subcollection: /lobbies/{lobbyId}/actions/{actionId} ===
+      match /actions/{actionId} {
+        allow get: if isSignedIn()
+          && isValidInviteCode(lobbyId)
+          && isValidId(actionId)
+          && isLobbyMember(lobbyId);
+
+        allow list: if isSignedIn()
+          && resource.data.lobbyId == lobbyId
+          && isLobbyMember(lobbyId);
+
+        // Append-only; requires lobby to be updated atomically in same batch/transaction (Pillar 7)
+        allow create: if isSignedIn()
+          && isValidInviteCode(lobbyId)
+          && isValidId(actionId)
+          && isValidCommittedAction(incoming(), lobbyId, actionId)
+          && isLobbyMember(lobbyId)
+          && getAfter(/databases/$(database)/documents/lobbies/$(lobbyId)).data.version == incoming().resultingVersion;
+
+        allow update, delete: if false;
+      }
+    }
+  }
+}

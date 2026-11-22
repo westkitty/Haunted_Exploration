@@ -1,0 +1,260 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-study: #0c0908;
+    --surface-walnut: #181310;
+    --surface-walnut-elevated: #231c17;
+    --surface-paper: #f1e8d6;
+    --surface-paper-aged: #e5d7bd;
+    --ink-dark: #1d1610;
+    --ink-ivory: #f0e7d6;
+    --ink-muted: #aba08e;
+    --accent-brass: #c99c52;
+    --accent-brass-bright: #e4ba70;
+    --accent-verdigris: #7db4a5;
+    --accent-crimson: #9e312e;
+    --font-display: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Lora', Georgia, serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-study);
+    color: var(--ink-ivory);
+    font-family: var(--font-body);
+  }
+
+  button:focus-visible,
+  input:focus-visible {
+    outline: 2px solid rgba(228, 186, 112, 0.85);
+    outline-offset: 2px;
+  }
+}
+
+.font-display {
+  font-family: var(--font-display);
+  text-wrap: balance;
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+.font-mono-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tactile antique walnut tray surface for optional modals/drawers */
+.walnut-panel {
+  background-color: #17120f;
+  background-image: linear-gradient(175deg, rgba(44, 32, 23, 0.45) 0%, rgba(16, 12, 10, 0.96) 100%);
+  border: 1px solid rgba(196, 155, 88, 0.28);
+  box-shadow:
+    0 20px 55px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 rgba(235, 204, 145, 0.14),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.55);
+}
+
+/* Physical letterpress linen stock card with subtle procedural paper fibers & warm foxing */
+.parchment-card {
+  position: relative;
+  background-color: #efe5d1;
+  background-image:
+    radial-gradient(ellipse at 18% 12%, rgba(255, 250, 238, 0.7) 0%, transparent 55%),
+    radial-gradient(ellipse at 86% 90%, rgba(168, 134, 86, 0.24) 0%, transparent 60%),
+    linear-gradient(168deg, #f3ead7 0%, #e7d9bd 100%);
+  color: #1f1711;
+  border: 1px solid #967746;
+  box-shadow:
+    0 24px 60px rgba(4, 2, 1, 0.72),
+    0 4px 12px rgba(4, 2, 1, 0.45),
+    inset 0 0 0 4px rgba(150, 119, 70, 0.14),
+    inset 0 0 28px rgba(120, 88, 44, 0.12);
+}
+
+.brass-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(196, 155, 88, 0.42) 50%, transparent 100%);
+}
+
+/* Crisp tactile button press feel (<140ms) */
+.tactile-btn {
+  transition:
+    transform 120ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.tactile-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+
+/* Physical tabletop card deal entrance */
+@keyframes cardDealIn {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.96) rotate(-0.6deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+.animate-card-deal {
+  animation: cardDealIn 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Smooth right-edge walnut drawer slide-in */
+@keyframes drawerSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-drawer-in {
+  animation: drawerSlideIn 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Ultra-subtle pointer-events-none edge scrims so borderless ivory HUD text stays legible over lit rooms */
+.hud-edge-scrim-top {
+  background: linear-gradient(
+    180deg,
+    rgba(9, 7, 6, 0.56) 0%,
+    rgba(9, 7, 6, 0.18) 58%,
+    rgba(9, 7, 6, 0) 100%
+  );
+}
+
+.hud-edge-scrim-bottom {
+  background: linear-gradient(
+    0deg,
+    rgba(9, 7, 6, 0.62) 0%,
+    rgba(9, 7, 6, 0.18) 56%,
+    rgba(9, 7, 6, 0) 100%
+  );
+}
+
+/* Bespoke antique brass range slider */
+input[type="range"].brass-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: linear-gradient(90deg, rgba(196, 155, 88, 0.48), rgba(196, 155, 88, 0.22));
+  border-radius: 1px;
+  cursor: pointer;
+}
+
+input[type="range"].brass-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f5d68c 0%, #c99c52 55%, #7e5a23 100%);
+  border: 1px solid rgba(250, 232, 188, 0.7);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.65);
+  transition: transform 120ms ease;
+}
+
+input[type="range"].brass-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.14);
+}
+
+input[type="range"].brass-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f5d68c 0%, #c99c52 55%, #7e5a23 100%);
+  border: 1px solid rgba(250, 232, 188, 0.7);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.65);
+}
+
+/* Floating diegetic board popup (+1 Clue, -1 AP) */
+@keyframes floatPopup {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(0.92);
+  }
+  16% {
+    opacity: 1;
+    transform: translate(-50%, -4px) scale(1);
+  }
+  78% {
+    opacity: 1;
+    transform: translate(-50%, -26px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -42px) scale(0.96);
+  }
+}
+
+.animate-board-popup {
+  animation: floatPopup 1150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Dice tumble settle animation */
+@keyframes diceTumble {
+  0% {
+    transform: rotate(-18deg) translateY(-10px) scale(0.86);
+    opacity: 0.4;
+  }
+  45% {
+    transform: rotate(9deg) translateY(2px) scale(1.06);
+    opacity: 1;
+  }
+  72% {
+    transform: rotate(-3deg) translateY(-1px) scale(0.99);
+  }
+  100% {
+    transform: rotate(0deg) translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-dice-tumble {
+  animation: diceTumble 360ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Subtle dark scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 13, 11, 0.45);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(196, 155, 88, 0.35);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(196, 155, 88, 0.65);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "The House That Remembers",
+  "description": "A procedural 3D haunted-house exploration and asymmetric betrayal board game where every door expands a living Victorian dollhouse.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
