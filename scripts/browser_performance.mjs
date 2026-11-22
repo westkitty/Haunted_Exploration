@@ -13,6 +13,9 @@ const fixedViewport = { width: 1280, height: 720 };
 const sampleMs = 30000;
 const slowThresholdMs = 50;
 const errors = [];
+const mode = process.env.HAUNTED_PERF_MODE || 'software';
+assert.ok(mode === 'software' || mode === 'hardware', 'HAUNTED_PERF_MODE must be software or hardware');
+const hardware = mode === 'hardware';
 
 function quantile(raw, q) {
   if (raw.length === 0) return null;
@@ -33,8 +36,10 @@ function durationDelta(before, after, key) {
 
 const browser = await chromium.launch({
   executablePath: process.env.HAUNTED_CHROMIUM_PATH || undefined,
-  headless: true,
-  args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--enable-webgl'],
+  // Hardware evidence must come from a real desktop browser session. In this
+  // mode, never force ANGLE SwiftShader or bypass the Chrome sandbox.
+  headless: hardware ? process.env.HAUNTED_PERF_HEADLESS === '1' : true,
+  args: hardware ? [] : ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--enable-webgl'],
 });
 
 const context = await browser.newContext({ viewport: fixedViewport, deviceScaleFactor: 1 });
@@ -63,6 +68,7 @@ const startedAt = Date.now();
 const phases = [];
 let navigation = null;
 let fixture = null;
+let gpuEvidence = null;
 
 async function phase(label) {
   await page.evaluate(() => {
@@ -112,6 +118,7 @@ async function phase(label) {
     simulation: { meanMs: mean(cpuUpdate), p95Ms: quantile(cpuUpdate, 0.95), p99Ms: quantile(cpuUpdate, 0.99) },
     renderSubmission: { meanMs: mean(submission), p95Ms: quantile(submission, 0.95), p99Ms: quantile(submission, 0.99) },
     renderer: raw.renderer,
+    sharedRoomCache: raw.sharedRoomCache,
     longTasks: { count: longTaskWindow.length, p95Ms: quantile(longTaskWindow.map(x => x.duration), 0.95) },
     cdp: {
       taskDurationSeconds: durationDelta(before, after, 'TaskDuration'),
@@ -123,6 +130,12 @@ async function phase(label) {
   const minimumFrames = raw.softwareGL ? 12 : 60;
   const adequateSamples = intervals.length >= minimumFrames;
   phases.push({ ...summary, adequateSamples, minimumFrames, rawFrames: frames });
+  if (hardware) {
+    fs.mkdirSync(outDir, { recursive: true });
+    // Human visual-parity evidence only. Never use a fluctuating screenshot
+    // for automatic pixel-perfect claims about particle/lighting animation.
+    await page.screenshot({ path: outDir + '/p006-hardware-' + label + '.png' });
+  }
   console.log('P006_PHASE', JSON.stringify({ ...summary, adequateSamples, minimumFrames }));
   // Collect all phase evidence even when samples are sparse. Never claim PASS
   // based on an interrupted or unrepresentative first phase.
@@ -151,6 +164,31 @@ async function goBackToMenu() {
 try {
   await page.goto(origin + '/?perf=1', { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Begin Expedition' }).waitFor({ timeout: 30_000 });
+  gpuEvidence = await page.evaluate(() => {
+    for (const canvas of document.querySelectorAll('canvas')) {
+      const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+      if (!gl) continue;
+      const debug = gl.getExtension('WEBGL_debug_renderer_info');
+      return {
+        renderer: debug ? String(gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) || '') : null,
+        vendor: debug ? String(gl.getParameter(debug.UNMASKED_VENDOR_WEBGL) || '') : null,
+        maskedRenderer: String(gl.getParameter(gl.RENDERER) || ''),
+        debugExtensionAvailable: Boolean(debug),
+      };
+    }
+    return null;
+  });
+  if (hardware) {
+    const probe = await page.evaluate(() => window.__HAUNTED_P006__?.read());
+    assert.ok(probe, 'Dev-only scene probe missing');
+    assert.equal(probe.softwareGL, false, 'Scene manager detected software WebGL, reject hardware evidence');
+    assert.ok(gpuEvidence?.debugExtensionAvailable && gpuEvidence.renderer,
+      'Unmasked GPU renderer unavailable: cannot establish hardware acceleration');
+    assert.doesNotMatch(gpuEvidence.renderer,
+      /SwiftShader|llvmpipe|softpipe|Software|Basic Render|Virtual GPU/i,
+      'Browser reports software/virtual graphics, not actual GPU acceleration');
+    console.log('P006_HARDWARE_GPU_VERIFIED', JSON.stringify(gpuEvidence));
+  }
   const readyAt = Date.now();
   navigation = await page.evaluate(() => {
     const e = performance.getEntriesByType('navigation')[0];
@@ -193,16 +231,21 @@ try {
     viewport: fixedViewport,
     devicePixelRatio: 1,
     mode: first.renderingMode,
+    gpuEvidence,
     postprocessing: first.postprocessing,
     canvas: first.canvas,
     quality: 'existing-scene-default',
-    device: 'GitHub-hosted Ubuntu x64 virtual machine with software-rendering flags',
-    realDevice: false,
+    device: hardware ? os.hostname() : 'GitHub-hosted Ubuntu x64 virtual machine with software-rendering flags',
+    realDevice: hardware ? os.platform() === 'darwin' && !process.env.CI : false,
+    osPlatform: os.platform(),
+    osRelease: os.release(),
+    osArchitecture: os.arch(),
     cpuModel: os.cpus()[0]?.model ?? 'unknown',
     cpus: os.cpus().length,
     totalMemoryBytes: os.totalmem(),
     network: 'local Vite HTTP loopback',
     capture: 'MansionSceneManager existing-loop opt-in instrumentation + Chromium CDP',
+    benchmarkMode: mode,
     phaseDurationMs: sampleMs,
     seed: fixture?.seed ?? null,
   };
@@ -221,7 +264,7 @@ try {
   const adequatePhases = phases.every(p => p.adequateSamples);
   const record = {
     formatVersion: 1,
-    captureStatus: adequatePhases ? 'valid' : 'insufficient-samples',
+    captureStatus: adequatePhases ? (hardware ? 'hardware-baseline-captured' : 'software-diagnostic-only') : 'insufficient-samples',
     buildSha: process.env.GITHUB_SHA || 'local-uncommitted',
     runId: process.env.GITHUB_RUN_ID || 'local',
     timeUtc: new Date().toISOString(),
@@ -231,15 +274,15 @@ try {
     workloadSignature, provisionalBudgets,
     phases, recovered,
     environmentLimitations: [
-      'Headless hosted runner, not user desktop or mobile',
-      'Software GL intentionally throttles frames via GPU fence and 80ms timeout',
+      hardware ? 'Machine GPU was positively identified by WebGL debug renderer; this is still a single host, not general device proof' : 'Headless hosted runner, not user desktop or mobile',
+      hardware ? 'Hardware mode ran without forced software-renderer flags; external GPU timings still unmeasured' : 'Software GL intentionally throttles frames via GPU fence and 80ms timeout',
       'Renderer info cannot prove total GPU/native allocations or listener cleanup',
       'CDP TaskDuration is approximate main-thread time, not dedicated GPU timing',
-      'Steady 6.5-second phases do not prove long-session stability',
+      'Five 30-second phases do not prove long-session stability',
     ],
   };
   fs.mkdirSync(outDir, { recursive: true });
-  const outPath = outDir + '/p006-baseline-' + record.buildSha.slice(0, 12) + '.json';
+  const outPath = outDir + '/p006-' + mode + '-' + record.buildSha.slice(0, 12) + '-' + new Date().toISOString().replace(/[:.]/g, '-') + '.json';
   fs.writeFileSync(outPath, JSON.stringify(record, null, 2) + '\n');
   console.log('P006_EVIDENCE_FILE', outPath);
   console.log('P006_RESOURCE_DELTAS', JSON.stringify(recovered));

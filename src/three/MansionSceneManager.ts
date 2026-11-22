@@ -14,6 +14,7 @@ import {
   buildGhostMesh,
   buildRoomMesh,
   disposeObjectTree,
+  getSharedRoomCacheStats,
   FLOOR_SPACING,
   ROOM_SIZE,
   roomWorldPosition,
@@ -298,6 +299,7 @@ export class MansionSceneManager {
         ghostCount: this.ghostMeshes.size,
         playerCount: this.playerMeshes.size,
       },
+      sharedRoomCache: getSharedRoomCacheStats(),
       renderer: {
         geometries: info.memory.geometries,
         textures: info.memory.textures,
@@ -1630,7 +1632,7 @@ export class MansionSceneManager {
           simulationMs: afterSimulation - start,
           renderSubmissionMs: performance.now() - afterSimulation,
         });
-        if (this.performanceFrameSamples.length > 1200) this.performanceFrameSamples.shift();
+        if (this.performanceFrameSamples.length > 4000) this.performanceFrameSamples.shift();
       }
 
       if (this.isSoftwareGl) {

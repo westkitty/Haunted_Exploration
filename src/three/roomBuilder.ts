@@ -4062,6 +4062,32 @@ export function buildGhostMesh(ghost: GhostInstance, textures?: ProceduralTextur
 }
 
 /**
+ * Read-only diagnostics for module-level shared resources. Never dispose these
+ * from a single room: multiple scenes/rooms can reference the same object.
+ * WeakMap-backed per-texture bundles are not enumerable and are not counted.
+ */
+export function getSharedRoomCacheStats() {
+  const geometryByKind: Record<string, number> = {};
+  for (const key of _geoCache.keys()) {
+    const kind = key.split(':', 1)[0];
+    geometryByKind[kind] = (geometryByKind[kind] ?? 0) + 1;
+  }
+  return {
+    geometryEntries: _geoCache.size,
+    geometryByKind,
+    floorGeometryReady: _roomFloorGeo !== null,
+    hoverBorderGeometryReady: _hoverBorderGeo !== null,
+    plaqueMaterials: _plaqueMatCache.size,
+    plaqueTextures: _plaqueMatCache.size,
+    velvetMaterials: _velvetCache.size,
+    flaskMaterials: _flaskMatCache.size,
+    coatMaterials: _coatMatCache.size,
+    accentMaterials: _accentMatCache.size,
+    perTextureWeakMapBundles: 'not-enumerable',
+  };
+}
+
+/**
  * Safely disposes room/figurine-owned GPU geometries, materials, InstancedMesh buffers,
  * and unique CanvasTextures without ever freeing module-cached shared geometries/materials
  * or ProceduralTextures.
