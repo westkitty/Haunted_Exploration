@@ -17,7 +17,7 @@ Last inspected: 2026-11-22. This file tracks verified work, not an aspirational 
 ## Phase state
 - P001: source pins verified and 54 Agy source blobs transplanted with original relative paths; 59-file initial integration commit verified; actual runtime test pending. Original sources not mutated.
 - P002: source ownership documented in docs/ARCHITECTURE_DECISIONS.md; Agy designated sole engine/render/UI owner; no Haunted source wholesale merged. Narrative canon decisions pending.
-- P003: side-effect-free import, 1 MiB file limit, structural validator, deterministic regression script and workflow committed to integration branch. Tests and build NOT YET EXECUTED; GitHub Actions runs listing was empty at last check. Storage quota UI warning and full validation proof remain pending.
+- P003: side-effect-free import, 1 MiB file limit, structural validator, deterministic regression script and workflow committed to integration branch. Automated checks PASSED on commit 67071bbed5601e928cf281c5dd5ceb16282f4abf via GitHub Actions run 45007258281: Bun lock install, typecheck, save test, engine/WS test and production build. Browser storage-denial warning and interactive save UX proof remain pending.
 - P004: full solo Last Midnight journey pending browser proof.
 - P006: actual browser performance baseline and matched after-trace pending.
 
@@ -25,7 +25,7 @@ Last inspected: 2026-11-22. This file tracks verified work, not an aspirational 
 - Original Agy src/engine/saveManager.ts importSaveJson wrote to storage before confirmation. Third-version branch changes it to a pure stage operation; correctness pending tests.
 - Original Agy validateSaveObject checked shallow shape. Third-version branch adds nested topology validation; correctness and existing-save compatibility pending tests.
 - Source WebSocket server trusts a client-supplied playerId as identity; Firestore client computes authoritative state. Do not claim multiplayer secure.
-- No documented passing build or browser runtime execution for this new repo yet. Workflow file exists but zero runs were returned; no green claim.
+- GitHub Actions completed successfully for 67071bbed5601e928cf281c5dd5ceb16282f4abf. Browser-level end-to-end expedition and device/performance checks remain UNVERIFIED.
 
 ## Rollback and data safety
 - Preserve the bootstrap main commit and import commit as separate checkpoints; never force-push or erase a source repo.
@@ -33,9 +33,9 @@ Last inspected: 2026-11-22. This file tracks verified work, not an aspirational 
 - Every phase needs actual typecheck, focused tests, build and browser evidence where available; unexecuted checks remain UNKNOWN.
 
 ## Current branch checkpoint
-- Verified branch head after workflow addition: `2a02b1b7359579ad64ca13579ae892fdcfdcf32f`.
+- Last verified code-head with passing CI: `67071bbed5601e928cf281c5dd5ceb16282f4abf`.
 - Main remains the README-only bootstrap commit `070f059b3a05610a68ea6dcdc98143d030005957`.
 - Preserved original source blobs in independent GitHub repositories; source content imports exclude `public/assets/aistudio/*` and original Firebase project config, which is replaced with a disabled empty placeholder.
 - Test commands when a Bun environment is available: `bun install --frozen-lockfile`, `bun run typecheck`, `bun run test:save`, `bun run test:engine`, `bun run build`.
-- CI workflow exists at `.github/workflows/verify.yml`, but GitHub's run listing contained zero runs at the time of checking; CI status is UNKNOWN, not PASS.
-- Do not merge to main or deploy until the above tests and an end-to-end browser solo expedition pass.
+- CI workflow at `.github/workflows/verify.yml` passed: https://github.com/westkitty/Haunted_Exploration/actions/runs/45007258281 (exact tested code SHA above). The initial workflow run failed a TypeScript narrowing check; that was corrected and independently rechecked in the passing run.
+- Do not merge to main or deploy until P003 storage failure UI is covered, a browser solo expedition has passed, and the user authorizes that release boundary.
