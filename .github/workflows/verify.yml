@@ -22,6 +22,11 @@ jobs:
           bun-version: latest
       - name: Install locked dependencies
         run: bun install --frozen-lockfile
+      - name: P006 handoff syntax (never executes hardware benchmark)
+        run: |
+          bash -n scripts/run_p006_hardware.sh
+          node --check scripts/browser_performance.mjs
+          node --check scripts/compare_p006_hardware.mjs
       - name: Typecheck
         run: bun run typecheck
       - name: Safe-import regression
