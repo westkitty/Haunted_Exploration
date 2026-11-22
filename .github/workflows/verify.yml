@@ -46,7 +46,7 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Install test-only Chromium driver
         run: |
-          npm install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.55.1
+          npm install --no-save --legacy-peer-deps --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.55.1
           npx playwright install --with-deps chromium
       - name: Browser save and Last Midnight journeys
         run: |
