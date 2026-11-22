@@ -132,9 +132,8 @@ export function importSaveJson(text: string): { ok: true; state: GameState } | {
   try {
     const parsed = JSON.parse(text);
     const validated = validateSaveObject(parsed);
-    if (validated.ok) {
-      saveActiveGame(validated.state);
-    }
+    // Parsing and validation must not alter persistent storage.
+    // SettingsModal stages this state; App commits it only after confirmation.
     return validated;
   } catch {
     return { ok: false, error: 'Could not parse JSON save file.' };
