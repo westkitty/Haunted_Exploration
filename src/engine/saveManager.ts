@@ -6,6 +6,7 @@ import type {
 } from './types.ts';
 import { CURRENT_SCHEMA_VERSION } from './actionResolver.ts';
 import { getCharacterById } from './characters.ts';
+import { validateSavedGameState } from './validateSavedGameState.ts';
 
 const SAVE_KEY = 'thtr_active_save_v1';
 const SETTINGS_KEY = 'thtr_settings_v1';
@@ -84,6 +85,8 @@ export function validateSaveObject(raw: unknown): { ok: true; state: GameState }
   ) {
     return { ok: false, error: 'Save file is corrupted or missing required mansion state.' };
   }
+  const invalid = validateSavedGameState(gs);
+  if (invalid) return { ok: false, error: invalid };
   return { ok: true, state: gs as GameState };
 }
 
@@ -129,6 +132,7 @@ export function exportSaveJson(state: GameState): string {
 }
 
 export function importSaveJson(text: string): { ok: true; state: GameState } | { ok: false; error: string } {
+  if (text.length > 1_048_576) return { ok: false, error: 'Save file exceeds 1 MiB.' };
   try {
     const parsed = JSON.parse(text);
     const validated = validateSaveObject(parsed);
